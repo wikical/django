@@ -37,17 +37,27 @@ class ContentTypeManager(models.Manager):
         opts = self._get_opts(model, for_concrete_model)
         try:
             ct = self._get_from_cache(opts)
+            return ct
         except KeyError:
-            # Load or create the ContentType entry. The smart_text() is
-            # needed around opts.verbose_name_raw because name_raw might be a
-            # django.utils.functional.__proxy__ object.
-            ct, created = self.get_or_create(
+            pass
+        
+        # The ContentType entry was not found in the cache, therefore we
+        # proceed to load or create it. We can't use get_or_create because it
+        # always uses db_for_write, whereas db_for_read should be sufficient
+        # for the vast majority of cases.
+        try:
+            ct = self.get(app_label = opts.app_label, model = opts.model_name)
+        except self.model.DoesNotExist:
+            # Not found in the database; we proceed to create it.  The
+            # smart_text() is needed around opts.verbose_name_raw because
+            # name_raw might be a django.utils.functional.__proxy__ object.
+            ct = self.model(
                 app_label = opts.app_label,
                 model = opts.object_name.lower(),
-                defaults = {'name': smart_text(opts.verbose_name_raw)},
+                name = smart_text(opts.verbose_name_raw),
             )
-            self._add_to_cache(self.db, ct)
-
+            ct.save()
+        self._add_to_cache(self.db, ct)
         return ct
 
     def get_for_models(self, *models, **kwargs):
