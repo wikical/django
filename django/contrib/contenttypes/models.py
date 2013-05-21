@@ -46,7 +46,8 @@ class ContentTypeManager(models.Manager):
         # always uses db_for_write, whereas db_for_read should be sufficient
         # for the vast majority of cases.
         try:
-            ct = self.get(app_label = opts.app_label, model = opts.model_name)
+            ct = self.get(app_label = opts.app_label,
+                          model = opts.object_name.lower())
         except self.model.DoesNotExist:
             # Not found in the database; we proceed to create it.  The
             # smart_text() is needed around opts.verbose_name_raw because
