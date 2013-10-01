@@ -229,8 +229,8 @@ prompts.
 The :djadminopt:`--database` option may be used to specify the database
 to flush.
 
---no-initial-data
-~~~~~~~~~~~~~~~~~
+``--no-initial-data``
+~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: 1.5
 
@@ -1068,8 +1068,8 @@ prompts.
 The :djadminopt:`--database` option can be used to specify the database to
 synchronize.
 
---no-initial-data
-~~~~~~~~~~~~~~~~~
+``--no-initial-data``
+~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: 1.5
 
@@ -1255,6 +1255,8 @@ clearsessions
 ~~~~~~~~~~~~~~~
 
 .. django-admin:: clearsessions
+
+.. versionadded:: 1.5
 
 Can be run as a cron job or directly to clean out expired sessions.
 
@@ -1527,6 +1529,15 @@ Examples::
       from django.core import management
       management.call_command('flush', verbosity=0, interactive=False)
       management.call_command('loaddata', 'test_data', verbosity=0)
+
+Note that command options that take no arguments are passed as keywords
+with ``True`` or ``False``::
+
+      management.call_command('dumpdata', use_natural_keys=True)
+
+Command options which take multiple options are passed a list::
+
+      management.call_command('dumpdata', exclude=['contenttypes', 'auth'])
 
 Output redirection
 ==================

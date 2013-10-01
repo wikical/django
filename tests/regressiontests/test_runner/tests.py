@@ -285,6 +285,65 @@ class DummyBackendTest(unittest.TestCase):
             db.connections = old_db_connections
 
 
+class AliasedDefaultTestSetupTest(unittest.TestCase):
+    def test_setup_aliased_default_database(self):
+        """
+        Test that setup_datebases() doesn't fail when 'default' is aliased
+        """
+        runner = DjangoTestSuiteRunner(verbosity=0)
+        old_db_connections = db.connections
+        try:
+            db.connections = db.ConnectionHandler({
+                'default': {
+                    'NAME': 'dummy'
+                },
+                'aliased': {
+                    'NAME': 'dummy'
+                }
+            })
+            old_config = runner.setup_databases()
+            runner.teardown_databases(old_config)
+        except Exception as e:
+            self.fail("setup_databases/teardown_databases unexpectedly raised "
+                      "an error: %s" % e)
+        finally:
+            db.connections = old_db_connections
+
+
+class AliasedDatabaseTest(unittest.TestCase):
+    def test_setup_aliased_databases(self):
+        from django.db.backends.dummy.base import DatabaseCreation
+
+        runner = DjangoTestSuiteRunner(verbosity=0)
+        old_db_connections = db.connections
+        old_destroy_test_db = DatabaseCreation.destroy_test_db
+        old_create_test_db = DatabaseCreation.create_test_db
+        try:
+            destroyed_names = []
+            DatabaseCreation.destroy_test_db = lambda self, old_database_name, verbosity=1: destroyed_names.append(old_database_name)
+            DatabaseCreation.create_test_db = lambda self, verbosity=1, autoclobber=False: self._get_test_db_name()
+
+            db.connections = db.ConnectionHandler({
+                'default': {
+                    'ENGINE': 'django.db.backends.dummy',
+                    'NAME': 'dbname',
+                },
+                'other': {
+                    'ENGINE': 'django.db.backends.dummy',
+                    'NAME': 'dbname',
+                }
+            })
+
+            old_config = runner.setup_databases()
+            runner.teardown_databases(old_config)
+
+            self.assertEqual(destroyed_names.count('dbname'), 1)
+        finally:
+            DatabaseCreation.create_test_db = old_create_test_db
+            DatabaseCreation.destroy_test_db = old_destroy_test_db
+            db.connections = old_db_connections
+
+
 class DeprecationDisplayTest(AdminScriptTestCase):
     # tests for 19546
     def setUp(self):

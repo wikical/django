@@ -362,7 +362,8 @@ Some of the things you can do with the test client are:
   everything from low-level HTTP (result headers and status codes) to
   page content.
 
-* Test that the correct view is executed for a given URL.
+* See the chain of redirects (if any) and check the URL and status code at
+  each step.
 
 * Test that a given request is rendered by a given Django template, with
   a template context that contains certain values.
@@ -371,8 +372,8 @@ Note that the test client is not intended to be a replacement for Selenium_ or
 other "in-browser" frameworks. Django's test client has a different focus. In
 short:
 
-* Use Django's test client to establish that the correct view is being
-  called and that the view is collecting the correct context data.
+* Use Django's test client to establish that the correct template is being
+  rendered and that the template is passed the correct context data.
 
 * Use in-browser frameworks like Selenium_ to test *rendered* HTML and the
   *behavior* of Web pages, namely JavaScript functionality. Django also
@@ -910,13 +911,22 @@ to test the effects of commit and rollback:
 
 * A ``TestCase``, on the other hand, does not truncate tables after a test.
   Instead, it encloses the test code in a database transaction that is rolled
-  back at the end of the test.  It also prevents the code under test from
-  issuing any commit or rollback operations on the database, to ensure that the
-  rollback at the end of the test restores the database to its initial state.
+  back at the end of the test. Both explicit commits like
+  ``transaction.commit()`` and implicit ones that may be caused by
+  ``Model.save()`` are replaced with a ``nop`` operation. This guarantees that
+  the rollback at the end of the test restores the database to its initial
+  state.
 
   When running on a database that does not support rollback (e.g. MySQL with the
   MyISAM storage engine), ``TestCase`` falls back to initializing the database
   by truncating tables and reloading initial data.
+
+.. warning::
+
+    While ``commit`` and ``rollback`` operations still *appear* to work when
+    used in ``TestCase``, no actual commit or rollback will be performed by the
+    database. This can cause your tests to pass or fail unexpectedly. Always
+    use ``TransactionalTestCase`` when testing transactional behavior.
 
 .. note::
 

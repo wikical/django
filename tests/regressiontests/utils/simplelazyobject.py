@@ -3,6 +3,8 @@ from __future__ import unicode_literals
 import copy
 import pickle
 
+from django.contrib.auth.models import User
+from django.test import TestCase as DjangoTestCase
 from django.test.utils import str_prefix
 from django.utils import six
 from django.utils.unittest import TestCase
@@ -121,3 +123,26 @@ class TestUtilsSimpleLazyObject(TestCase):
         self.assertEqual(unpickled, x)
         self.assertEqual(six.text_type(unpickled), six.text_type(x))
         self.assertEqual(unpickled.name, x.name)
+
+
+class TestUtilsSimpleLazyObjectDjangoTestCase(DjangoTestCase):
+
+    def test_pickle_py2_regression(self):
+        # See ticket #20212
+        user = User.objects.create_user('johndoe', 'john@example.com', 'pass')
+        x = SimpleLazyObject(lambda: user)
+
+        # This would fail with "TypeError: can't pickle instancemethod objects",
+        # only on Python 2.X.
+        pickled = pickle.dumps(x)
+
+        # Try the variant protocol levels.
+        pickled = pickle.dumps(x, 0)
+        pickled = pickle.dumps(x, 1)
+        pickled = pickle.dumps(x, 2)
+
+        if not six.PY3:
+            import cPickle
+
+            # This would fail with "TypeError: expected string or Unicode object, NoneType found".
+            pickled = cPickle.dumps(x)
