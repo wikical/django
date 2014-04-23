@@ -951,7 +951,7 @@ current page::
 The first parameter of ``ssi`` can be a quoted literal or any other context
 variable.
 
-If the optional "parsed" parameter is given, the contents of the included
+If the optional ``parsed`` parameter is given, the contents of the included
 file are evaluated as template code, within the current context::
 
     {% ssi '/home/html/ljworld.com/includes/right_generic.html' parsed %}
@@ -959,6 +959,13 @@ file are evaluated as template code, within the current context::
 Note that if you use ``{% ssi %}``, you'll need to define
 :setting:`ALLOWED_INCLUDE_ROOTS` in your Django settings, as a security
 measure.
+
+.. note::
+    With the :ttag:`ssi` tag and the ``parsed`` parameter
+    there is no shared state between files -- each include is a completely
+    independent rendering process. This means it's not possible for example to
+    define blocks or alter the context in the current page using the included
+    file.
 
 See also: :ttag:`{% include %}<include>`.
 
@@ -997,9 +1004,15 @@ url
 ^^^
 
 Returns an absolute path reference (a URL without the domain name) matching a
-given view function and optional parameters. This is a way to output links
-without violating the DRY principle by having to hard-code URLs in your
-templates::
+given view function and optional parameters.
+
+.. versionchanged:: 1.6
+
+    Any special characters in the resulting path will be encoded using
+    :func:`~django.utils.encoding.iri_to_uri`.
+
+This is a way to output links without violating the DRY principle by having to
+hard-code URLs in your templates::
 
     {% url 'path.to.some_view' v1 v2 %}
 
@@ -1047,10 +1060,12 @@ cause your site to display an error page.
 If you'd like to retrieve a URL without displaying it, you can use a slightly
 different call::
 
-
     {% url 'path.to.view' arg arg2 as the_url %}
 
     <a href="{{ the_url }}">I'm linking to {{ the_url }}</a>
+
+The scope of the variable created by the  ``as var`` syntax is the
+``{% block %}`` in which the ``{% url %}`` tag appears.
 
 This ``{% url ... as var %}`` syntax will *not* cause an error if the view is
 missing. In practice you'll use this to link to views that are optional::
@@ -1997,7 +2012,7 @@ If ``value`` is ``10``, the output will be ``1.000000E+01``.
 striptags
 ^^^^^^^^^
 
-Strips all [X]HTML tags.
+Makes all possible efforts to strip all [X]HTML tags.
 
 For example::
 
@@ -2005,6 +2020,16 @@ For example::
 
 If ``value`` is ``"<b>Joel</b> <button>is</button> a <span>slug</span>"``, the
 output will be ``"Joel is a slug"``.
+
+.. admonition:: No safety guarantee
+
+    Note that ``striptags`` doesn't give any guarantee about its output being
+    entirely HTML safe, particularly with non valid HTML input. So **NEVER**
+    apply the ``safe`` filter to a ``striptags`` output.
+    If you are looking for something more robust, you can use the ``bleach``
+    Python library, notably its `clean`_ method.
+
+.. _clean: http://bleach.readthedocs.org/en/latest/clean.html
 
 .. templatefilter:: time
 
@@ -2454,10 +2479,9 @@ get_static_prefix
 
 .. highlight:: html+django
 
-If you're not using :class:`~django.template.RequestContext`, or if you need
-more control over exactly where and how :setting:`STATIC_URL` is injected
-into the template, you can use the :ttag:`get_static_prefix` template tag
-instead::
+You should prefer the :ttag:`static` template tag, but if you need more control
+over exactly where and how :setting:`STATIC_URL` is injected into the template,
+you can use the :ttag:`get_static_prefix` template tag::
 
     {% load static %}
     <img src="{% get_static_prefix %}images/hi.jpg" alt="Hi!" />

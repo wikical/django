@@ -36,10 +36,9 @@ older versions of Django and install a newer one.
 .. admonition:: Where to get help:
 
     If you're having trouble going through this tutorial, please post a message
-    to `django-users`__ or drop by `#django on irc.freenode.net`__ to chat
+    to |django-users| or drop by `#django on irc.freenode.net`__ to chat
     with other Django users who might be able to help.
 
-__ http://groups.google.com/group/django-users
 __ irc://irc.freenode.net/django
 
 Creating a project
@@ -674,7 +673,7 @@ Save these changes and start a new Python interactive shell by running
     >>> Poll.objects.get(id=2)
     Traceback (most recent call last):
         ...
-    DoesNotExist: Poll matching query does not exist. Lookup parameters were {'id': 2}
+    DoesNotExist: Poll matching query does not exist.
 
     # Lookup by a primary key is the most common case, so Django provides a
     # shortcut for primary-key exact lookups.

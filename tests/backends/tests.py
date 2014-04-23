@@ -2,6 +2,7 @@
 # Unit and doctests for specific database backends.
 from __future__ import absolute_import, unicode_literals
 
+import copy
 import datetime
 from decimal import Decimal
 import threading
@@ -315,16 +316,18 @@ class PostgresVersionTest(TestCase):
         self.assertEqual(pg_version.get_version(conn), 80300)
 
 
-class PostgresNewConnectionTest(TestCase):
-    """
-    #17062: PostgreSQL shouldn't roll back SET TIME ZONE, even if the first
-    transaction is rolled back.
-    """
+class PostgresNewConnectionTests(TestCase):
+
     @unittest.skipUnless(
         connection.vendor == 'postgresql',
         "This test applies only to PostgreSQL")
     def test_connect_and_rollback(self):
-        new_connections = ConnectionHandler(settings.DATABASES)
+        """
+        PostgreSQL shouldn't roll back SET TIME ZONE, even if the first
+        transaction is rolled back (#17062).
+        """
+        databases = copy.deepcopy(settings.DATABASES)
+        new_connections = ConnectionHandler(databases)
         new_connection = new_connections[DEFAULT_DB_ALIAS]
         try:
             # Ensure the database default time zone is different than
@@ -349,10 +352,26 @@ class PostgresNewConnectionTest(TestCase):
             tz = cursor.fetchone()[0]
             self.assertEqual(new_tz, tz)
         finally:
-            try:
-                new_connection.close()
-            except DatabaseError:
-                pass
+            new_connection.close()
+
+    @unittest.skipUnless(
+        connection.vendor == 'postgresql',
+        "This test applies only to PostgreSQL")
+    def test_connect_non_autocommit(self):
+        """
+        The connection wrapper shouldn't believe that autocommit is enabled
+        after setting the time zone when AUTOCOMMIT is False (#21452).
+        """
+        databases = copy.deepcopy(settings.DATABASES)
+        databases[DEFAULT_DB_ALIAS]['AUTOCOMMIT'] = False
+        new_connections = ConnectionHandler(databases)
+        new_connection = new_connections[DEFAULT_DB_ALIAS]
+        try:
+            # Open a database connection.
+            new_connection.cursor()
+            self.assertFalse(new_connection.get_autocommit())
+        finally:
+            new_connection.close()
 
 
 # This test needs to run outside of a transaction, otherwise closing the
@@ -469,7 +488,7 @@ class BackendTestCase(TestCase):
     def create_squares_with_executemany(self, args):
         self.create_squares(args, 'format', True)
 
-    def create_squares(self, args, paramstyle, multiple):    
+    def create_squares(self, args, paramstyle, multiple):
         cursor = connection.cursor()
         opts = models.Square._meta
         tbl = connection.introspection.table_name_converter(opts.db_table)
@@ -541,7 +560,7 @@ class BackendTestCase(TestCase):
             # same test for DebugCursorWrapper
             self.create_squares(args, 'pyformat', multiple=True)
         self.assertEqual(models.Square.objects.count(), 9)
-        
+
     def test_unicode_fetches(self):
         #6254: fetchone, fetchmany, fetchall return strings as unicode objects
         qn = connection.ops.quote_name
@@ -591,6 +610,29 @@ class BackendTestCase(TestCase):
         query = 'CREATE TABLE %s (id INTEGER);' % models.Article._meta.db_table
         with self.assertRaises(DatabaseError):
             cursor.execute(query)
+
+    # Unfortunately with sqlite3 the in-memory test database cannot be closed.
+    @skipUnlessDBFeature('test_db_allows_multiple_connections')
+    def test_is_usable_after_database_disconnects(self):
+        """
+        Test that is_usable() doesn't crash when the database disconnects.
+
+        Regression for #21553.
+        """
+        # Open a connection to the database.
+        connection.cursor().close()
+        # Emulate a connection close by the database.
+        connection._close()
+        # Even then is_usable() should not raise an exception.
+        try:
+            self.assertFalse(connection.is_usable())
+        finally:
+            # Clean up the mess created by connection._close(). Since the
+            # connection is already closed, this crashes on some backends.
+            try:
+                connection.close()
+            except Exception:
+                pass
 
 
 # We don't make these tests conditional because that means we would need to

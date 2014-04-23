@@ -106,7 +106,7 @@ respectively).
     in the :doc:`sessions documentation </topics/http/sessions>` on
     how to enable sessions.
 
-We will use the :class:`SessionWizardView` in all examples but is is completely
+We will use the :class:`SessionWizardView` in all examples but is completely
 fine to use the :class:`CookieWizardView` instead. As with your
 :class:`~django.forms.Form` classes, this :class:`WizardView` class can live
 anywhere in your codebase, but convention is to put it in :file:`views.py`.
@@ -229,7 +229,7 @@ Here's a full example template:
 Hooking the wizard into a URLconf
 ---------------------------------
 
-.. method:: WizardView.as_view
+.. method:: WizardView.as_view()
 
 Finally, we need to specify which forms to use in the wizard, and then
 deploy the new :class:`WizardView` object at a URL in the ``urls.py``. The
@@ -304,7 +304,7 @@ The ``urls.py`` file would contain something like::
 
 .. versionchanged:: 1.6
 
-The ``condiction_dict`` can be passed as attribute for the ``as_view()`
+The ``condition_dict`` can be passed as attribute for the ``as_view()`
 method or as a class attribute named ``condition_dict``::
 
     class OrderWizard(WizardView):
@@ -390,8 +390,13 @@ Advanced ``WizardView`` methods
     The default template context variables are:
 
     * Any extra data the storage backend has stored
-    * ``form`` -- form instance of the current step
-    * ``wizard`` -- the wizard instance itself
+    * ``wizard`` -- a dictionary representation of the wizard instance with the
+      following key/values:
+
+      * ``form`` -- :class:`~django.forms.Form` or
+        :class:`~django.forms.formsets.BaseFormSet` instance for the current step
+      * ``steps`` -- A helper object to access the various steps related data
+      * ``management_form`` -- all the management data for the current step
 
     Example to add extra variables for a specific step::
 

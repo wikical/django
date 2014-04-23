@@ -13,8 +13,8 @@ The tests cover:
 We appreciate any and all contributions to the test suite!
 
 The Django tests all use the testing infrastructure that ships with Django for
-testing applications. See :doc:`Testing Django applications
-</topics/testing/overview>` for an explanation of how to write new tests.
+testing applications. See :doc:`/topics/testing/overview` for an explanation of
+how to write new tests.
 
 .. _running-unit-tests:
 
@@ -31,7 +31,7 @@ with this sample ``settings`` module:
 
 .. code-block:: bash
 
-    git clone git@github.com:django/django.git django-repo
+    git clone https://github.com:django/django.git django-repo
     cd django-repo/tests
     PYTHONPATH=..:$PYTHONPATH python ./runtests.py --settings=test_sqlite
 

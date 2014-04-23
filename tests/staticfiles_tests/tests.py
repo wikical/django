@@ -21,6 +21,10 @@ from django.utils._os import rmtree_errorhandler, upath
 from django.utils import six
 
 from django.contrib.staticfiles import finders, storage
+from django.contrib.staticfiles.management.commands import collectstatic
+
+from .storage import DummyStorage
+
 
 TEST_ROOT = os.path.dirname(upath(__file__))
 TEST_SETTINGS = {
@@ -221,6 +225,40 @@ class TestFindStatic(CollectionTestCase, TestDefaults):
         self.assertEqual(len(lines), 2)
         self.assertIn('project', force_text(lines[0]))
         self.assertIn('apps', force_text(lines[1]))
+
+
+class TestConfiguration(StaticFilesTestCase):
+    def test_location_empty(self):
+        err = six.StringIO()
+        for root in ['', None]:
+            with override_settings(STATIC_ROOT=root):
+                with six.assertRaisesRegex(
+                        self, ImproperlyConfigured,
+                        'without having set the STATIC_ROOT setting to a filesystem path'):
+                    call_command('collectstatic', interactive=False, verbosity=0, stderr=err)
+
+    def test_local_storage_detection_helper(self):
+        staticfiles_storage = storage.staticfiles_storage
+        try:
+            storage.staticfiles_storage._wrapped = empty
+            with override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage'):
+                command = collectstatic.Command()
+                self.assertTrue(command.is_local_storage())
+
+            storage.staticfiles_storage._wrapped = empty
+            with override_settings(STATICFILES_STORAGE='staticfiles_tests.storage.DummyStorage'):
+                command = collectstatic.Command()
+                self.assertFalse(command.is_local_storage())
+
+            storage.staticfiles_storage = storage.FileSystemStorage()
+            command = collectstatic.Command()
+            self.assertTrue(command.is_local_storage())
+
+            storage.staticfiles_storage = DummyStorage()
+            command = collectstatic.Command()
+            self.assertFalse(command.is_local_storage())
+        finally:
+            storage.staticfiles_storage = staticfiles_storage
 
 
 class TestCollection(CollectionTestCase, TestDefaults):

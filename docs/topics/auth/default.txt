@@ -12,9 +12,9 @@ is.  For projects where authentication needs differ from the default, Django
 supports extensive :doc:`extension and customization
 </topics/auth/customizing>` of authentication.
 
-Django authentication provides both authentication and authorization, together
+Django authentication provides both authentication and authorization together
 and is generally referred to as the authentication system, as these features
-somewhat coupled.
+are somewhat coupled.
 
 .. _user-objects:
 
@@ -25,17 +25,18 @@ User objects
 authentication system. They typically represent the people interacting with
 your site and are used to enable things like restricting access, registering
 user profiles, associating content with creators etc. Only one class of user
-exists in Django's authentication framework, i.e., 'superusers' or admin
-'staff' users are just user objects with special attributes set, not different
-classes of user objects.
+exists in Django's authentication framework, i.e., :attr:`'superusers'
+<django.contrib.auth.models.User.is_superuser>` or admin :attr:`'staff'
+<django.contrib.auth.models.User.is_staff>` users are just user objects with
+special attributes set, not different classes of user objects.
 
 The primary attributes of the default user are:
 
-* username
-* password
-* email
-* first name
-* last name
+* :attr:`~django.contrib.auth.models.User.username`
+* :attr:`~django.contrib.auth.models.User.password`
+* :attr:`~django.contrib.auth.models.User.email`
+* :attr:`~django.contrib.auth.models.User.first_name`
+* :attr:`~django.contrib.auth.models.User.last_name`
 
 See the :class:`full API documentation <django.contrib.auth.models.User>` for
 full reference, the documentation that follows is more task oriented.
@@ -135,6 +136,16 @@ Authenticating Users
         else:
             # the authentication system was unable to verify the username and password
             print("The username and password were incorrect.")
+
+    .. note::
+
+        This is a low level way to authenticate a set of credentials; for
+        example, it's used by the
+        :class:`~django.contrib.auth.middleware.RemoteUserMiddleware`. Unless
+        you are writing your own authentication system, you probably won't use
+        this. Rather if you are looking for a way to limit access to logged in
+        users, see the :func:`~django.contrib.auth.decorators.login_required`
+        decorator.
 
 .. _topic-authorization:
 
@@ -247,6 +258,39 @@ The permission can then be assigned to a
 :class:`~django.contrib.auth.models.User` via its ``user_permissions``
 attribute or to a :class:`~django.contrib.auth.models.Group` via its
 ``permissions`` attribute.
+
+Permission caching
+------------------
+
+The :class:`~django.contrib.auth.backends.ModelBackend` caches permissions on
+the ``User`` object after the first time they need to be fetched for a
+permissions check. This is typically fine for the request-response cycle since
+permissions are not typically checked immediately after they are added (in the
+admin, for example). If you are adding permissions and checking them immediately
+afterward, in a test or view for example, the easiest solution is to re-fetch
+the ``User`` from the database. For example::
+
+    from django.contrib.auth.models import Permission, User
+    from django.shortcuts import get_object_or_404
+
+    def user_gains_perms(request, user_id):
+        user = get_object_or_404(User, pk=user_id)
+        # any permission check will cache the current set of permissions
+        user.has_perm('myapp.change_bar')
+
+        permission = Permission.objects.get(codename='change_bar')
+        user.user_permissions.add(permission)
+
+        # Checking the cached permission set
+        user.has_perm('myapp.change_bar')  # False
+
+        # Request new instance of User
+        user = get_object_or_404(User, pk=user_id)
+
+        # Permission cache is repopulated from the database
+        user.has_perm('myapp.change_bar')  # True
+
+        ...
 
 .. _auth-web-requests:
 

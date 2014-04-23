@@ -5,7 +5,7 @@ Customizing authentication in Django
 The authentication that comes with Django is good enough for most common cases,
 but you may have needs not met by the out-of-the-box defaults. To customize
 authentication to your projects needs involves understanding what points of the
-provided system are extendible or replaceable. This document provides details
+provided system are extensible or replaceable. This document provides details
 about how the auth system can be customized.
 
 :ref:`Authentication backends <authentication-backends>` provide an extensible
@@ -502,7 +502,7 @@ password resets. You must then provide some key implementation details:
         as the identifying field::
 
             class MyUser(AbstractBaseUser):
-                identifier = models.CharField(max_length=40, unique=True, db_index=True)
+                identifier = models.CharField(max_length=40, unique=True)
                 ...
                 USERNAME_FIELD = 'identifier'
 
@@ -530,8 +530,9 @@ password resets. You must then provide some key implementation details:
 
         .. note::
 
-            ``REQUIRED_FIELDS`` must contain all required fields on your User
-            model, but should *not* contain the ``USERNAME_FIELD``.
+            ``REQUIRED_FIELDS`` must contain all required fields on your
+            ``User`` model, but should *not* contain the ``USERNAME_FIELD`` or
+            ``password`` as these fields will always be prompted for.
 
     .. attribute:: is_active
 
@@ -991,7 +992,6 @@ authentication app::
             verbose_name='email address',
             max_length=255,
             unique=True,
-            db_index=True,
         )
         date_of_birth = models.DateField()
         is_active = models.BooleanField(default=True)
@@ -1078,7 +1078,7 @@ code would be required in the app's ``admin.py`` file::
 
         class Meta:
             model = MyUser
-            fields = ['email', 'password', 'date_of_birth', 'is_active', 'is_admin']
+            fields = ('email', 'password', 'date_of_birth', 'is_active', 'is_admin')
 
         def clean_password(self):
             # Regardless of what the user provides, return the initial value.
